@@ -6,43 +6,81 @@ contraseña = 2515
 contraseña_admin = 1515
 intentos = 3
 tiempo_pausa = 2
-contraseñas= np.array([2515, 1515])
-tipos_usuario = np.array(["usuario","administrador"])
 
-calificaciones_juegos = np.array([
-                        [0,0,0,0,0],
-                        [0,0,0,0,0],
-                        
-])
-indice = None
+contraseñas = np.array([2515, 1515])  # Contraseñas de usuario y administrador
+tipos_usuario = np.array(["usuario", "administrador"])  # Tipos de usuario
 
-# Diccionario de juegos
-juegos = {     
-    "1": {"nombre": "Coleccion Master Chief", "precio": 45.000},
-    "2": {"nombre": "Fifa 2024", "precio": 110.000},
-    "3": {"nombre": "Call OF Duty", "precio": 94.000},
-    "4": {"nombre": "Fornite", "precio": 55.000},
-    "5": {"nombre": "Apex Legendes", "precio": 80.000},
-}
+# Inicializar el diccionario de juegos y la matriz de calificaciones
+juegos = {}
+calificaciones_juegos = np.zeros((2, 5))  # Para almacenar las calificaciones de los juegos
 
-# Lista para almacenar los juegos comprados
-juegos_comprados = []
+# Función para cargar los juegos desde un archivo
+def cargar_juegos():
+    global juegos
+    try:
+        with open('juegos.txt', 'r') as archivo:
+            for linea in archivo.readlines():
+                # Ignorar líneas vacías
+                if not linea.strip():
+                    continue
+                id_juego, nombre_juego, precio_juego = linea.strip().split(',')
+                juegos[id_juego] = {"nombre": nombre_juego, "precio": float(precio_juego)}
+    except FileNotFoundError:
+        print("Archivo de juegos no encontrado. Se creará uno nuevo.")
 
+# Función para guardar los juegos en el archivo
+def guardar_juegos():
+    with open('juegos.txt', 'w') as archivo:
+        for id_juego, juego in juegos.items():
+            archivo.write(f"{id_juego},{juego['nombre']},{juego['precio']}\n")
+
+# Función para mostrar los juegos
 def mostrar_juegos():
-    global juegos, juegos_ordenados
-    if 'juegos_ordenados' in globals():
-        juegos_lista = juegos_ordenados
-    else:
-        juegos_lista = list(juegos.items())
-    
     print("\nLista de juegos:")
-    for id_juego, juego in juegos_lista:
+    for id_juego, juego in juegos.items():
         print(f"{id_juego}. {juego['nombre']} - ${juego['precio']:.2f}")
 
+# Función para agregar un juego
+def agregar_juego():
+    global juegos, calificaciones_juegos
+    id_juego = str(len(juegos) + 1)
+    nombre_juego = input("Ingrese el nombre del juego: ")
+    precio_juego = float(input("Ingrese el precio del juego: "))
+    juegos[id_juego] = {"nombre": nombre_juego, "precio": precio_juego}
+    print("Juego agregado con éxito")
+    # Guardar en el archivo
+    guardar_juegos()
 
-# Matriz para almacenar calificaciones de juegos
-calificaciones_juegos = np.zeros((2, len(juegos)))
+    # Agregar una nueva columna a la matriz de calificaciones
+    calificaciones_juegos = np.pad(calificaciones_juegos, ((0, 0), (1, 0)), mode='constant')
 
+# Función para eliminar un juego
+def eliminar_juego(id_juego):
+    global juegos, calificaciones_juegos
+    if id_juego in juegos:
+        del juegos[id_juego]
+        print("Juego eliminado con éxito")
+        # Guardar los cambios en el archivo
+        guardar_juegos()
+        
+        # Eliminar la calificación de ese juego
+        calificaciones_juegos = np.delete(calificaciones_juegos, int(id_juego) - 1, axis=1)
+    else:
+        print("Juego no encontrado")
+
+# Función para actualizar el precio de un juego
+def actualizar_precio(id_juego):
+    global juegos
+    if id_juego in juegos:
+        nuevo_precio = float(input("Ingrese el nuevo precio: "))
+        juegos[id_juego]["precio"] = nuevo_precio
+        print("Precio actualizado con éxito")
+        # Guardar los cambios en el archivo
+        guardar_juegos()
+    else:
+        print("Juego no encontrado")
+
+# Función para calificar un juego
 def calificar_juego(tipo_usuario, indice):
     id_juego = input("Ingrese el número del juego que desea calificar: ")
     if id_juego in juegos:
@@ -64,17 +102,7 @@ def calificar_juego(tipo_usuario, indice):
     else:
         print("Juego no encontrado.")
 
-def calificacion_promedio():
-    # Calcular calificación promedio de todos los juegos
-    calificaciones = calificaciones_juegos.flatten()
-    calificaciones = calificaciones[calificaciones != 0]  # Eliminar calificaciones vacías
-    
-    if len(calificaciones) > 0:  # Verificar si hay calificaciones
-        calificacion_promedio = np.mean(calificaciones)
-        print(f"Calificación promedio de todos los juegos: {calificacion_promedio:.2f}")
-    else:
-        print("No hay calificaciones para mostrar.")
-
+# Función para mostrar las calificaciones de los juegos
 def mostrar_calificaciones_juegos():
     print("\nCalificaciones de juegos:")
     for i, (id_juego, juego) in enumerate(juegos.items()):
@@ -92,29 +120,24 @@ def mostrar_calificaciones_juegos():
         else:
             print("  - Calificación administrador: No calificado")
 
-def comprar_juego():
-    global juegos, juegos_ordenados, juegos_comprados, calificaciones_juegos
-    if 'juegos_ordenados' in globals():
-        juegos_lista = juegos_ordenados
+# Función para ordenar juegos por precio
+def ordenar_juegos_por_precio():
+    global juegos
+    tipo_orden = input("Desea ordenar en ascendente (A) o descendente (D)? ")
+    if tipo_orden.upper() == 'A':
+        tipo_orden = 'ascendente'
+    elif tipo_orden.upper() == 'D':
+        tipo_orden = 'descendente'
     else:
-        juegos_lista = list(juegos.items())
+        print("Opción inválida")
+        return
     
-    mostrar_juegos()
-    id_juego = input("Ingrese el número del juego que desea comprar: ")
+    juegos_lista = list(juegos.items())
+    juegos_ordenados = quick_sort(juegos_lista, tipo_orden)
     
-    for id, juego in juegos_lista:
-        if id == id_juego:
-            print(f"Ha comprado {juego['nombre']} por ${juego['precio']:.2f}")
-            juegos_comprados.append({"nombre": juego['nombre'], "precio": juego['precio']})
-            
-            calificar = input("¿Desea calificar el juego? (S/N): ")
-            if calificar.upper() == 'S':
-                calificar_juego("usuario", None)
-                calificacion_promedio()
-            
-            return
-    
-    print("Juego no encontrado")
+    print("\nJuegos ordenados por precio:")
+    for id_juego, juego in juegos_ordenados:
+        print(f"{id_juego}. {juego['nombre']} - ${juego['precio']:.2f}")
 
 def recoger_juegos():
     global juegos_comprados, juegos, calificaciones_juegos
@@ -150,6 +173,80 @@ def recoger_juegos():
         else:
             print("Selección inválida.")
 
+# Función para el ordenamiento rápido (quick sort) de juegos
+def quick_sort(juegos, tipo_orden):
+    if len(juegos) <= 1:
+        return juegos
+    pivote = juegos[len(juegos) // 2]
+    izquierda = [x for x in juegos if x[1]['precio'] < pivote[1]['precio']]
+    medio = [x for x in juegos if x[1]['precio'] == pivote[1]['precio']]
+    derecha = [x for x in juegos if x[1]['precio'] > pivote[1]['precio']]
+    
+    if tipo_orden == 'ascendente':
+        return quick_sort(izquierda, tipo_orden) + medio + quick_sort(derecha, tipo_orden)
+    elif tipo_orden == 'descendente':
+        return quick_sort(derecha, tipo_orden) + medio + quick_sort(izquierda, tipo_orden)
+
+# Función para el menú principal de administrador
+def menu_administrador():
+    global juegos
+    while True:
+        print("\n ---Menu Administrador---")
+        print(" 1. Agregar juegos ")
+        print(" 2. Eliminar juegos ")
+        print(" 3. Cambiar precio de juegos ")
+        print(" 4. Salir ")
+        opcion = input("ingresa una opcion: ")
+        if opcion == '1':
+            agregar_juego()
+        elif opcion == '2':
+            mostrar_juegos()
+            id_juego = input(" ingresa el ID del juego que deseas eliminar: ")
+            eliminar_juego(id_juego)
+        elif opcion == '3':
+            mostrar_juegos()
+            id_juego = input("ingresa el ID del juego que deseas cambiar de precio: ")
+            actualizar_precio(id_juego)
+        elif opcion == '4':
+            print("gracias por tu visita creador ")
+            break
+        else:
+            print("opcion invalida,\n intentalo de nuevo")
+
+def calificacion_promedio():
+    # Calcular calificación promedio de todos los juegos
+    calificaciones = calificaciones_juegos.flatten()
+    calificaciones = calificaciones[calificaciones != 0]  # Eliminar calificaciones vacías
+    
+    if len(calificaciones) > 0:  # Verificar si hay calificaciones
+        calificacion_promedio = np.mean(calificaciones)
+        print(f"Calificación promedio de todos los juegos: {calificacion_promedio:.2f}")
+    else:
+        print("No hay calificaciones para mostrar.")
+
+def comprar_juego():
+    global juegos, juegos_ordenados, juegos_comprados, calificaciones_juegos
+    if 'juegos_ordenados' in globals():
+        juegos_lista = juegos_ordenados
+    else:
+        juegos_lista = list(juegos.items())
+    
+    mostrar_juegos()
+    id_juego = input("Ingrese el número del juego que desea comprar: ")
+    
+    for id, juego in juegos_lista:
+        if id == id_juego:
+            print(f"Ha comprado {juego['nombre']} por ${juego['precio']:.2f}")
+            juegos_comprados.append({"nombre": juego['nombre'], "precio": juego['precio']})
+            
+            calificar = input("¿Desea calificar el juego? (S/N): ")
+            if calificar.upper() == 'S':
+                calificar_juego("usuario", None)
+                calificacion_promedio()
+            
+            return
+    
+    print("Juego no encontrado")
 
 def buscar_juegos():
     print("\n ---Busqueda de juegos---")
@@ -178,111 +275,18 @@ def buscar_juegos():
     else:
         print("no se ha encontrado resultados")
 
-def eliminar_juego(id_juego):
-    if id_juego in juegos and int(id_juego) <= calificaciones_juegos.shape[1]:
-        del juegos[id_juego]
-        calificaciones_juegos = np.delete(calificaciones_juegos, int(id_juego) - 1, axis=1)
-        print("juego eliminado con exito")
-    else:
-        print("juego no encontrado o ID inválido")
-
-# Agrega esta función después de la definición de juegos
-def quick_sort(juegos, tipo_orden):
-    if len(juegos) <= 1:
-        return juegos
-    pivote = juegos[len(juegos) // 2]
-    izquierda = [x for x in juegos if x[1]['precio'] < pivote[1]['precio']]
-    medio = [x for x in juegos if x[1]['precio'] == pivote[1]['precio']]
-    derecha = [x for x in juegos if x[1]['precio'] > pivote[1]['precio']]
-    
-    if tipo_orden == 'ascendente':
-        return quick_sort(izquierda, tipo_orden) + medio + quick_sort(derecha, tipo_orden)
-    elif tipo_orden == 'descendente':
-        return quick_sort(derecha, tipo_orden) + medio + quick_sort(izquierda, tipo_orden)
-
-# Modifica la función ordenar_juegos_por_precio para utilizar quick_sort
-def ordenar_juegos_por_precio():
-    global juegos, juegos_ordenados
-    tipo_orden = input("Desea ordenar en ascendente (A) o descendente (D)? ")
-    if tipo_orden.upper() == 'A':
-        tipo_orden = 'ascendente'
-    elif tipo_orden.upper() == 'D':
-        tipo_orden = 'descendente'
-    else:
-        print("Opción inválida")
-        return
-    
-    juegos_lista = list(juegos.items())
-    juegos_ordenados = quick_sort(juegos_lista, tipo_orden)
-    
-    print("\nJuegos ordenados por precio:")
-    for id_juego, juego in juegos_ordenados:
-        print(f"{id_juego}. {juego['nombre']} - ${juego['precio']:.2f}")
-
-def menu_administrador():
-    global juegos, calificaciones_juegos
-    while True:
-        print("\n ---Menu Administrador---")
-        print(" 1. Agregar juegos ")
-        print(" 2. Eliminar juegos ")
-        print(" 3. Cambiar precio de juegos ")
-        print(" 4. Salir ")
-        opcion = input("ingresa una opcion: ")
-        if opcion == '1':
-            agregar_juego()
-        elif opcion == '2':
-            mostrar_juegos()
-            id_juego = input(" ingresa el ID del juego que deseas eliminar: ")
-            eliminar_juego(id_juego)
-            calificaciones_juegos = np.delete(calificaciones_juegos, int(id_juego) - 1, axis=1)
-        elif opcion == '3':
-            mostrar_juegos()
-            id_juego = input("ingresa el ID del juego que deseas cambiar de precio: ")
-            actualizar_precio(id_juego)
-        elif opcion == '4':
-            print("gracias por tu visita creador ")
-            break
-        else:
-            print("opcion invalida,\n intentalo de nuevo")
-
-def agregar_juego():
-    global juegos, calificaciones_juegos
-    id_juego = str(len(juegos) + 1)
-    nombre_juego = input("Ingrese el nombre del juego: ")
-    precio_juego = float(input("Ingrese el precio del juego: "))
-    juegos[id_juego] = {"nombre": nombre_juego, "precio": precio_juego}
-    print("Juego agregado con éxito")
-    # Agregar calificaciones_juegos
-    calificaciones_juegos = np.pad(calificaciones_juegos, ((0, 0), (1, 0)), mode='constant')
-
-def eliminar_juego(id_juego):
-    global juegos, calificaciones_juegos
-    if id_juego in juegos:
-        del juegos[id_juego]
-        print("Juego eliminado con éxito")
-    else:
-        print("Juego no encontrado")
-
-def actualizar_precio(id_juego):
-    global juegos, calificaciones_juegos
-    if id_juego in juegos:
-        nuevo_precio = float(input("Ingrese el nuevo precio: "))
-        juegos[id_juego]["precio"] = nuevo_precio
-        print("Precio actualizado con éxito")
-    else:
-        print("Juego no encontrado")
-
+# Función para el menú principal del usuario
 def menu_principal():
     global juegos_ordenados
     while True:
-        print("\n""                      " "--- Menú Principal ---")
-        print("                    1."            " Comprar juego")
-        print("                    2."            " Recoger juegos")
-        print("                    3."            " Buscar juegos")
-        print("                    4."            " Menu administador ")
-        print("                    5."            " Ordenar juegos por precio")
-        print("                    6."            " Salir")
-        opcion = input("\n" "Seleccione una opción: ")
+        print("\n --- Menú Principal ---")
+        print(" 1. Comprar juego")
+        print(" 2. Recoger juegos")
+        print(" 3. Buscar juegos")
+        print(" 4. Menu Administrador")
+        print(" 5. Ordenar juegos por precio")
+        print(" 6. Salir")
+        opcion = input("Seleccione una opción: ")
         if opcion == '1':
             comprar_juego()
         elif opcion == '2':
@@ -291,10 +295,10 @@ def menu_principal():
             buscar_juegos()
         elif opcion == '4':
             contraseña_administrador = int(input(" Ingresa la contraseña del administrador: "))
-            if contraseña_administrador==contraseña_admin:
+            if contraseña_administrador == contraseña_admin:
                 menu_administrador()
             else:
-                print("contraseña incorrecta")
+                print("Contraseña incorrecta")
         elif opcion == '5':
             ordenar_juegos_por_precio()
         elif opcion == '6':
@@ -303,26 +307,24 @@ def menu_principal():
         else:
             print("Opción inválida. Por favor, intente de nuevo.")
 
+# Cargar los juegos al iniciar
+cargar_juegos()
 
-
+# Iniciar sesión
 while intentos > 0:
     ingresar_contraseña = int(input("Ingresa la contraseña: "))
     indice = np.where(contraseñas == ingresar_contraseña)[0]
     if len(indice) > 0:
         tipo_usuario = tipos_usuario[indice[0]]
-        print(f"inicio de sesion correcto como \n {tipo_usuario} ")
+        print(f"Ingreso exitoso como {tipo_usuario}")
         if tipo_usuario == "usuario":
             menu_principal()
         elif tipo_usuario == "administrador":
             menu_administrador()
-        calificar = (input("¿desea calificar el juego? (S/N):"))
-        if calificar.lower() == "s":
-            calificar_juego(tipo_usuario, indice[0])  # Corrección aquí
-            calificacion_promedio()
         break
     else:
         intentos -= 1
-        print(f"CONTRASEÑA INCORRECTA. {intentos} INTENTOS RESTANTES")
+        print(f"Contraseña incorrecta. {intentos} intentos restantes")
         if intentos > 0:
             print(f"{tiempo_pausa} segundos antes de otro intento")
             time.sleep(tiempo_pausa)
