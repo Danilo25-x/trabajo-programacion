@@ -1,9 +1,5 @@
 import numpy as np
 import time
-# Contraseñas de usuario
-contraseña = 2515
-intentos = 3
-tiempo_pausa = 2
 
 # Contraseñas de usuario
 contraseñas = np.array([2515])  # Solo dejamos la contraseña para el usuario
@@ -31,7 +27,7 @@ class Juego:
 class EliminarRegistro:
     def _init_(self, juegos):
         """Inicializa la clase con los registros de juegos (puede ser la lista o diccionario de juegos)"""
-        self.juegos = juegos  # Este es el diccionario de juegos registrados
+        self.juegos = juegos if juegos else {} # Este es el diccionario de juegos registrados
 
     def eliminar_juego(self, id_juego):
         """Eliminar un juego del registro por su ID"""
@@ -78,7 +74,7 @@ class RegistroJuegos:
 
     def guardar_juegos(self):
         """Guardar los juegos registrados en un archivo de texto"""
-        with open('registros_juegos.txt', mode='w', encoding='utf-8') as archivo_txt:
+        with open('registros_juegos.txt', mode='a', encoding='utf-8') as archivo_txt:
             for juego in self.juegos.values():
                 archivo_txt.write(f"{juego.id_juego} | {juego.nombre_juego} | {juego.plataforma} | {juego.genero} | ${juego.precio}\n")
             print("Juegos guardados correctamente en registros_juegos.txt.")
@@ -127,9 +123,9 @@ def menu_principal():
         print("1. Comprar juego")
         print("2. Recoger juegos")
         print("3. Buscar juegos")
-        print("4. Añadir registro de juego")  # Opción para agregar juego
-        print("5. Eliminar Registro de juego")  # Opción para eliminar juego
-        print("6. Mostrar los registros")  # Mostrar juegos del usuario
+        print("4. Añadir registro de juego")  
+        print("5. Eliminar Registro de juego")  
+        print("6. Mostrar los registros")  
         print("7. Salir")
         opcion = input("Seleccione una opción: ")
 
@@ -165,6 +161,9 @@ def cargar_juegos():
     pass  # Deberías cargar los juegos desde los archivos si deseas mantener los datos
 
 # Iniciar sesión
+intentos = 3
+tiempo_pausa = 2
+
 while intentos > 0:
     ingresar_contraseña = int(input("Ingresa la contraseña: "))
     indice = np.where(contraseñas == ingresar_contraseña)[0]
@@ -185,4 +184,4 @@ while intentos > 0:
             time.sleep(tiempo_pausa)
             tiempo_pausa += 2
         if intentos == 0:
-            print("cuenta bloqueada")
+            print("Cuenta bloqueada")
