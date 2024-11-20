@@ -1,297 +1,138 @@
-import time
 import numpy as np
-
-# Inicio de sesión o creación de usuario
+import time
+# Contraseñas de usuario
 contraseña = 2515
-contraseña_admin = 1515
 intentos = 3
 tiempo_pausa = 2
 
-contraseñas = np.array([2515, 1515])  # Contraseñas de usuario y administrador
-tipos_usuario = np.array(["usuario", "administrador"])  # Tipos de usuario
+# Contraseñas de usuario
+contraseñas = np.array([2515])  # Solo dejamos la contraseña para el usuario
+tipos_usuario = np.array(["usuario"])  # Solo tenemos tipo "usuario"
 
 # Inicializar el diccionario de juegos y la matriz de calificaciones
 juegos = {}
 calificaciones_juegos = np.zeros((2, 5))  # Para almacenar las calificaciones de los juegos
-juegos_ordenados = []  # Inicializar juegos ordenados como lista vacía
-juegos_comprados = []  # Definir globalmente una lista vacía de juegos comprados
+juegos_comprados = []  # Lista de juegos comprados
+juegos_usuario = {}  # Diccionario para juegos creados por el usuario
 
+# Clase Juego
+class Juego:
+    def _init_(self, id_juego, nombre_juego, plataforma, genero, precio):
+        self.id_juego = id_juego
+        self.nombre_juego = nombre_juego
+        self.plataforma = plataforma
+        self.genero = genero
+        self.precio = precio
 
-# Función para cargar los juegos desde un archivo
-def cargar_juegos():
-    global juegos
-    try:
-        with open('juegos.txt', 'r') as archivo:
-            for linea in archivo.readlines():
-                # Ignorar líneas vacías
-                if not linea.strip():
-                    continue
-                id_juego, nombre_juego, precio_juego = linea.strip().split(',')
-                juegos[id_juego] = {"nombre": nombre_juego, "precio": float(precio_juego)}
-    except FileNotFoundError:
-        print("Archivo de juegos no encontrado. Se creará uno nuevo.")
+    def _str_(self):
+        return f"ID: {self.id_juego}, Nombre: {self.nombre_juego}, Plataforma: {self.plataforma}, Género: {self.genero}, Precio: ${self.precio}"
 
-# Función para guardar los juegos en el archivo
-def guardar_juegos():
-    with open('juegos.txt', 'w') as archivo:
-        for id_juego, juego in juegos.items():
-            archivo.write(f"{id_juego},{juego['nombre']},{juego['precio']}\n")
+# Clase EliminarRegistro
+class EliminarRegistro:
+    def _init_(self, juegos):
+        """Inicializa la clase con los registros de juegos (puede ser la lista o diccionario de juegos)"""
+        self.juegos = juegos  # Este es el diccionario de juegos registrados
 
-# Función para mostrar los juegos
-def mostrar_juegos():
-    print("\nLista de juegos:")
-    for id_juego, juego in juegos.items():
-        print(f"{id_juego}. {juego['nombre']} - ${juego['precio']:.2f}")
+    def eliminar_juego(self, id_juego):
+        """Eliminar un juego del registro por su ID"""
+        if id_juego in self.juegos:
+            del self.juegos[id_juego]
+            print(f"Juego con ID {id_juego} eliminado correctamente.")
+            self.actualizar_archivo()
+        else:
+            print(f"El juego con ID {id_juego} no existe en el registro.")
 
-# Función para agregar un juego
-def agregar_juego():
-    global juegos, calificaciones_juegos
-    id_juego = str(len(juegos) + 1)
+    def mostrar_juegos(self):
+        """Mostrar todos los juegos registrados"""
+        if not self.juegos:
+            print("No hay juegos registrados.")
+        else:
+            print("Juegos registrados:")
+            for juego in self.juegos.values():
+                print(juego)
+
+    def actualizar_archivo(self):
+        """Actualizar el archivo después de la eliminación de un juego"""
+        with open('registros_juegos.txt', mode='w', encoding='utf-8') as archivo_txt:
+            for juego in self.juegos.values():
+                archivo_txt.write(f"{juego.id_juego} | {juego.nombre_juego} | {juego.plataforma} | {juego.genero} | ${juego.precio}\n")
+            print("Archivo de registros actualizado correctamente.")
+
+# Registro de Juegos (para agregar nuevos juegos)
+class RegistroJuegos:
+    def _init_(self):
+        self.juegos = {}
+
+    def agregar_juego(self):
+        """Registrar un nuevo juego"""
+        id_juego = str(len(self.juegos) + 1)
+        nombre_juego = input("Ingrese el nombre del juego: ")
+        plataforma = input("Ingrese la plataforma del juego (PC, PS5, Xbox, etc.): ")
+        genero = input("Ingrese el género del juego (Aventura, Acción, RPG, etc.): ")
+        precio = float(input("Ingrese el precio del juego: "))
+        
+        nuevo_juego = Juego(id_juego, nombre_juego, plataforma, genero, precio)
+        self.juegos[id_juego] = nuevo_juego
+        print("Juego registrado correctamente.")
+        self.guardar_juegos()
+
+    def guardar_juegos(self):
+        """Guardar los juegos registrados en un archivo de texto"""
+        with open('registros_juegos.txt', mode='w', encoding='utf-8') as archivo_txt:
+            for juego in self.juegos.values():
+                archivo_txt.write(f"{juego.id_juego} | {juego.nombre_juego} | {juego.plataforma} | {juego.genero} | ${juego.precio}\n")
+            print("Juegos guardados correctamente en registros_juegos.txt.")
+
+def agregar_juego_usuario():
+    """Agregar un juego por el usuario"""
+    id_juego = str(len(juegos_usuario) + 1)
     nombre_juego = input("Ingrese el nombre del juego: ")
-    precio_juego = float(input("Ingrese el precio del juego: "))
-    juegos[id_juego] = {"nombre": nombre_juego, "precio": precio_juego}
-    print("Juego agregado con éxito")
-    # Guardar en el archivo
-    guardar_juegos()
-
-    # Agregar una nueva columna a la matriz de calificaciones
-    calificaciones_juegos = np.pad(calificaciones_juegos, ((0, 0), (1, 0)), mode='constant')
-
-# Función para eliminar un juego
-def eliminar_juego(id_juego):
-    global juegos, calificaciones_juegos
-    if id_juego in juegos:
-        del juegos[id_juego]
-        print("Juego eliminado con éxito")
-        # Guardar los cambios en el archivo
-        guardar_juegos()
-        
-        # Eliminar la calificación de ese juego
-        calificaciones_juegos = np.delete(calificaciones_juegos, int(id_juego) - 1, axis=1)
-    else:
-        print(f"Juego con ID {id_juego} no encontrado.")
-
-# Función para actualizar el precio de un juego
-def actualizar_precio(id_juego):
-    global juegos
-    if id_juego in juegos:
-        nuevo_precio = float(input("Ingrese el nuevo precio: "))
-        juegos[id_juego]["precio"] = nuevo_precio
-        print("Precio actualizado con éxito")
-        # Guardar los cambios en el archivo
-        guardar_juegos()
-    else:
-        print("Juego no encontrado")
-
-# Función para calificar un juego
-def calificar_juego(tipo_usuario, indice):
-    id_juego = input("Ingrese el número del juego que desea calificar: ")
-    if id_juego in juegos:
-        calificacion = float(input("Ingrese la calificación (1-5): "))
-        while calificacion < 1 or calificacion > 5:
-            print("Calificación inválida. Por favor, ingrese una calificación entre 1 y 5.")
-            calificacion = float(input("Ingrese la calificación (1-5): "))
-        
-        # Convertir id_juego a índice (0-4)
-        indice_juego = int(id_juego) - 1
-        
-        # Guardar calificación en la matriz
-        if tipo_usuario == "usuario":
-            calificaciones_juegos[0, indice_juego] = calificacion
-        elif tipo_usuario == "administrador":
-            calificaciones_juegos[1, indice_juego] = calificacion
-        
-        print("Calificación guardada con éxito.")
-    else:
-        print("Juego no encontrado.")
-
-# Función para mostrar las calificaciones de los juegos
-def mostrar_calificaciones_juegos():
-    print("\nCalificaciones de juegos:")
-    for i, (id_juego, juego) in enumerate(juegos.items()):
-        calificacion_usuario = calificaciones_juegos[0, i]
-        calificacion_admin = calificaciones_juegos[1, i]
-        
-        print(f"{id_juego}. {juego['nombre']}:")
-        if calificacion_usuario != 0:
-            print(f"  - Calificación usuario: {calificacion_usuario:.2f}")
-        else:
-            print("  - Calificación usuario: No calificado")
-        
-        if calificacion_admin != 0:
-            print(f"  - Calificación administrador: {calificacion_admin:.2f}")
-        else:
-            print("  - Calificación administrador: No calificado")
-
-# Función para ordenar juegos por precio
-def ordenar_juegos_por_precio():
-    global juegos
-    tipo_orden = input("Desea ordenar en ascendente (A) o descendente (D)? ")
-    if tipo_orden.upper() == 'A':
-        tipo_orden = 'ascendente'
-    elif tipo_orden.upper() == 'D':
-        tipo_orden = 'descendente'
-    else:
-        print("Opción inválida")
-        return
-
-    juegos_lista = list(juegos.items())
-    juegos_ordenados = quick_sort(juegos_lista, tipo_orden)  # Se debe retornar y actualizar la variable global
-
-    print("\nJuegos ordenados por precio:")
-    for id_juego, juego in juegos_ordenados:
-        print(f"{id_juego}. {juego['nombre']} - ${juego['precio']:.2f}")
-
-def recoger_juegos():
-    global juegos_comprados, juegos, calificaciones_juegos
-    if not juegos_comprados:
-        print("\nNo has comprado ningún juego todavía.")
-    else:
-        print("\nJuegos disponibles para recoger:")
-        for i, juego in enumerate(juegos_comprados, 1):
-            id_juego = [id for id, juego_comprado in juegos.items() if juego_comprado['nombre'] == juego['nombre']][0]
-            calificacion_usuario = calificaciones_juegos[0, int(id_juego) - 1]
-            calificacion_admin = calificaciones_juegos[1, int(id_juego) - 1]
-            
-            print(f"{i}. {juego['nombre']} - ${juego['precio']:.2f}")
-            if calificacion_usuario != 0:
-                print(f"  - Calificación usuario: {calificacion_usuario:.2f}")
-            else:
-                print("  - Calificación usuario: No calificado")
-            
-            if calificacion_admin != 0:
-                print(f"  - Calificación administrador: {calificacion_admin:.2f}")
-            else:
-                print("  - Calificación administrador: No calificado")
-        
-        seleccion = input("\nIngrese el número del juego que desea recoger (o 'todos' para recoger todos): ")
-        if seleccion.lower() == 'todos':
-            print("\nHas recogido todos tus juegos:")
-            for juego in juegos_comprados:
-                print(f"- {juego['nombre']} - ${juego['precio']}")
-            juegos_comprados.clear()
-        elif seleccion.isdigit() and 1 <= int(seleccion) <= len(juegos_comprados):
-            juego_recogido = juegos_comprados.pop(int(seleccion) - 1)
-            print(f"Has recogido: {juego_recogido['nombre']} - ${juego_recogido['precio']}")
-        else:
-            print("Selección inválida.")
-
-# Función para el ordenamiento rápido (quick sort) de juegos
-def quick_sort(juegos, tipo_orden):
-    if len(juegos) <= 1:
-        return juegos
-    pivote = juegos[len(juegos) // 2]
-    izquierda = [x for x in juegos if x[1]['precio'] < pivote[1]['precio']]
-    medio = [x for x in juegos if x[1]['precio'] == pivote[1]['precio']]
-    derecha = [x for x in juegos if x[1]['precio'] > pivote[1]['precio']]
+    plataforma = input("Ingrese la plataforma del juego (PC, PS5, Xbox, etc.): ")
+    genero = input("Ingrese el género del juego (Aventura, Acción, RPG, etc.): ")
+    precio = float(input("Ingrese el precio del juego: "))
     
-    if tipo_orden == 'ascendente':
-        return quick_sort(izquierda, tipo_orden) + medio + quick_sort(derecha, tipo_orden)
-    elif tipo_orden == 'descendente':
-        return quick_sort(derecha, tipo_orden) + medio + quick_sort(izquierda, tipo_orden)
+    nuevo_juego = Juego(id_juego, nombre_juego, plataforma, genero, precio)
+    juegos_usuario[id_juego] = nuevo_juego
+    print("Juego añadido correctamente.")
 
-# Función para el menú principal de administrador
-def menu_administrador():
-    while True:
-        print("\n ---Menu Administrador---")
-        print(" 1. Agregar juegos ")
-        print(" 2. Eliminar juegos ")
-        print(" 3. Mostrar juegos ")
-        print(" 4. Actualizar precio juego ")
-        print(" 5. Ordenar juegos por precio ")
-        print(" 6. Mostrar calificaciones ")
-        print(" 7. Salir ")
+    # Guardar los juegos en el archivo de texto
+    with open('registros_juegos_usuario.txt', mode='a', encoding='utf-8') as archivo_txt:
+        archivo_txt.write(f"ID JUEGO {nuevo_juego.id_juego} | \n NOMBRE JUEGO {nuevo_juego.nombre_juego} | \n PLATAFORMA {nuevo_juego.plataforma} |\n GENERO  {nuevo_juego.genero} | \n PRECIO ${nuevo_juego.precio}\n")
 
-        opcion = input("\nElige una opción: ")
-        
-        if opcion == '1':
-            agregar_juego()
-        elif opcion == '2':
-            id_juego = input("Ingrese el ID del juego que desea eliminar: ")
-            eliminar_juego(id_juego)
-        elif opcion == '3':
-            mostrar_juegos()
-        elif opcion == '4':
-            id_juego = input("Ingrese el ID del juego que desea actualizar: ")
-            actualizar_precio(id_juego)
-        elif opcion == '5':
-            ordenar_juegos_por_precio()
-        elif opcion == '6':
-            mostrar_calificaciones_juegos()
-        elif opcion == '7':
-            break
-        else:
-            print("Opción inválida, por favor intente de nuevo.")
-
-
-def calificacion_promedio():
-    # Calcular calificación promedio de todos los juegos
-    calificaciones = calificaciones_juegos.flatten()
-    calificaciones = calificaciones[calificaciones != 0]  # Eliminar calificaciones vacías
-    
-    if len(calificaciones) > 0:  # Verificar si hay calificaciones
-        calificacion_promedio = np.mean(calificaciones)
-        print(f"Calificación promedio de todos los juegos: {calificacion_promedio:.2f}")
+def eliminar_juego_usuario():
+    """Eliminar un juego creado por el usuario"""
+    mostrar_juegos_usuario()
+    id_juego = input("Ingrese el ID del juego a eliminar: ")
+    if id_juego in juegos_usuario:
+        del juegos_usuario[id_juego]
+        print("Juego eliminado correctamente.")
+        with open('registros_juegos_usuario.txt', mode='w', encoding='utf-8') as archivo_txt:
+            for juego in juegos_usuario.values():
+                archivo_txt.write(f"{juego.id_juego} | {juego.nombre_juego} | {juego.plataforma} | {juego.genero} | ${juego.precio}\n")
     else:
-        print("No hay calificaciones para mostrar.")
+        print("El juego no existe.")
 
-def comprar_juego():
-    global juegos, juegos_comprados, calificaciones_juegos
-    mostrar_juegos()
-    id_juego = input("Ingrese el número del juego que desea comprar: ")
-    
-    if id_juego in juegos:
-        juego = juegos[id_juego]
-        print(f"Ha comprado {juego['nombre']} por ${juego['precio']:.2f}")
-        juegos_comprados.append({"nombre": juego['nombre'], "precio": juego['precio']})
-        
-        calificar = input("¿Desea calificar el juego? (S/N): ")
-        if calificar.upper() == 'S':
-            calificar_juego("usuario", None)  # Asegúrate de manejar correctamente el tipo de usuario
-            calificacion_promedio()
+def mostrar_juegos_usuario():
+    """Mostrar los juegos creados por el usuario"""
+    if not juegos_usuario:
+        print("No hay juegos creados por el usuario.")
     else:
-        print("Juego no encontrado.")
+        print("Juegos creados por el usuario:")
+        for juego in juegos_usuario.values():
+            print(juego)
 
-
-def buscar_juegos():
-    print("\n ---Busqueda de juegos---")
-    nombre_juego = input(" ingresa el nombre del juego: ").lower()
-    resultados = [juego for juego in juegos.values() if nombre_juego in juego['nombre'].lower()]
-    
-    if resultados:
-        print(" resultado de la busqueda :")
-        for juego in resultados:
-            print(f"-{juego['nombre']}-${juego['precio']}")
-        
-        respuesta = input("¿ Desea comprar este videojuego ? (S/N): ")
-        if respuesta.lower() == 'S':
-            juego_comprado = resultados[0]
-            juegos_comprados.append({"nombre": juego_comprado['nombre'], "precio": juego_comprado['precio']})
-            print(f"usted ha comprado {juego_comprado['nombre']} por ${juego_comprado['precio']}")
-            
-            calificar = input("¿Desea calificar el juego? (S/N): ")
-            if calificar.upper() == 'S':
-                calificar_juego("usuario", None)
-                calificacion_promedio()
-        
-        else:
-            print("Busqueda finalizada ")
-    
-    else:
-        print("no se ha encontrado resultados")
-
-# Función para el menú principal del usuario
 def menu_principal():
-    global juegos_ordenados
     while True:
-        print("\n --- Menú Principal ---")
-        print(" 1. Comprar juego")
-        print(" 2. Recoger juegos")
-        print(" 3. Buscar juegos")
-        print(" 4. Menu Administrador")
-        print(" 5. Ordenar juegos por precio")
-        print(" 6. Salir")
+        print("\n--- Menú Principal ---")
+        print("1. Comprar juego")
+        print("2. Recoger juegos")
+        print("3. Buscar juegos")
+        print("4. Añadir registro de juego")  # Opción para agregar juego
+        print("5. Eliminar Registro de juego")  # Opción para eliminar juego
+        print("6. Mostrar los registros")  # Mostrar juegos del usuario
+        print("7. Salir")
         opcion = input("Seleccione una opción: ")
+
         if opcion == '1':
             comprar_juego()
         elif opcion == '2':
@@ -299,21 +140,29 @@ def menu_principal():
         elif opcion == '3':
             buscar_juegos()
         elif opcion == '4':
-            contraseña_administrador = int(input(" Ingresa la contraseña del administrador: "))
-            if contraseña_administrador == contraseña_admin:
-                menu_administrador()
-            else:
-                print("Contraseña incorrecta")
+            agregar_juego_usuario()
         elif opcion == '5':
-            ordenar_juegos_por_precio()
+            eliminar_juego_usuario()
         elif opcion == '6':
+            mostrar_juegos_usuario()
+        elif opcion == '7':
             print("Gracias por su visita. ¡Hasta luego!")
             break
         else:
             print("Opción inválida. Por favor, intente de nuevo.")
 
-# Cargar los juegos al iniciar
-cargar_juegos()
+def comprar_juego():
+    print("Funcionalidad de compra de juego aún no implementada")
+
+def recoger_juegos():
+    print("Funcionalidad de recolección de juegos aún no implementada")
+
+def buscar_juegos():
+    print("Funcionalidad de búsqueda de juegos aún no implementada")
+
+# Cargar juegos al inicio (puedes modificarlo para cargar desde archivos)
+def cargar_juegos():
+    pass  # Deberías cargar los juegos desde los archivos si deseas mantener los datos
 
 # Iniciar sesión
 while intentos > 0:
@@ -322,10 +171,11 @@ while intentos > 0:
     if len(indice) > 0:
         tipo_usuario = tipos_usuario[indice[0]]
         print(f"Ingreso exitoso como {tipo_usuario}")
-        if tipo_usuario == "usuario":
-            menu_principal()
-        elif tipo_usuario == "administrador":
-            menu_administrador()
+        
+        # Crear instancia de EliminarRegistro para manejar los juegos
+        eliminar_registro = EliminarRegistro(juegos)
+        
+        menu_principal()
         break
     else:
         intentos -= 1
@@ -335,5 +185,4 @@ while intentos > 0:
             time.sleep(tiempo_pausa)
             tiempo_pausa += 2
         if intentos == 0:
-            print("Cuenta bloqueada")
-    
+            print("cuenta bloqueada")
