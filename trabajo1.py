@@ -14,6 +14,8 @@ tipos_usuario = np.array(["usuario", "administrador"])  # Tipos de usuario
 juegos = {}
 calificaciones_juegos = np.zeros((2, 5))  # Para almacenar las calificaciones de los juegos
 juegos_ordenados = []  # Inicializar juegos ordenados como lista vacía
+juegos_comprados = []  # Definir globalmente una lista vacía de juegos comprados
+
 
 # Función para cargar los juegos desde un archivo
 def cargar_juegos():
@@ -190,7 +192,6 @@ def quick_sort(juegos, tipo_orden):
 
 # Función para el menú principal de administrador
 def menu_administrador():
-    global juegos
     while True:
         print("\n ---Menu Administrador---")
         print(" 1. Agregar juegos ")
@@ -221,6 +222,7 @@ def menu_administrador():
             break
         else:
             print("Opción inválida, por favor intente de nuevo.")
+
 
 def calificacion_promedio():
     # Calcular calificación promedio de todos los juegos
